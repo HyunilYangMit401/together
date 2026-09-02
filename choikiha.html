@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실습 3 - 할 일 목록</title>
+<style>
+  :root {
+    --color-bg: #f2f4f7;
+    --color-primary: #3d5afe;
+    --color-primary-dark: #2c40c7;
+    --color-text: #1c1f26;
+    --color-muted: #6b7280;
+    --color-card-bg: #ffffff;
+    --color-danger: #e0433f;
+    --color-danger-bg: #fdf2f2;
+    --radius: 16px;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 48px 24px;
+  }
+  .card {
+    background: var(--color-card-bg);
+    width: 100%;
+    max-width: 420px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+  }
+  .card__title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .card__subtitle {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin-bottom: 20px;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .input-row input {
+    flex: 1;
+    padding: 11px 12px;
+    border: 1.5px solid #dfe3ea;
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+  }
+  .input-row input:focus {
+    border-color: var(--color-primary);
+  }
+  .add-btn {
+    padding: 0 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .add-btn:hover {
+    background: var(--color-primary-dark);
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--color-muted);
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    height: 6px;
+    background: #eef1ff;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+  .todo-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f8f9fb;
+  }
+  .todo-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .todo-item span {
+    flex: 1;
+    font-size: 14px;
+    word-break: break-all;
+  }
+  .todo-item.completed span {
+    text-decoration: line-through;
+    color: var(--color-muted);
+  }
+  .delete-btn {
+    border: none;
+    background: transparent;
+    color: var(--color-danger);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .delete-btn:hover {
+    background: var(--color-danger-bg);
+  }
+  .empty-message {
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 13px;
+    padding: 24px 0;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <h1 class="card__title">오늘의 할 일</h1>
+    <p class="card__subtitle">추가하고, 체크하고, 지워보세요</p>
+    <form class="input-row" id="todoForm">
+      <input type="text" id="todoInput" placeholder="할 일을 입력하세요" autocomplete="off">
+      <button type="submit" class="add-btn">추가</button>
+    </form>
+    <div class="progress-label">
+      <span>진행률</span>
+      <span id="progressText">0 / 0</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <ul class="todo-list" id="todoList"></ul>
+  </main>
+<script>
+  let todos = [
+    { id: 1, text: '시맨틱 태그로 마크업하기', completed: true },
+    { id: 2, text: 'flexbox 레이아웃 연습', completed: false }
+  ];
+  let nextId = 3; // 새 항목에 부여할 id (매번 1씩 증가)
+  const form = document.getElementById('todoForm');
+  const input = document.getElementById('todoInput');
+  const list = document.getElementById('todoList');
+  const progressBar = document.getElementById('progressBar');
+  const progressText = document.getElementById('progressText');
+  function render() {
+    list.innerHTML = '';
+    if (todos.length === 0) {
+      list.innerHTML = '<li class="empty-message">아직 할 일이 없어요 🙂</li>';
+    }
+    todos.forEach(function (todo) {
+      const li = document.createElement('li');
+      li.className = 'todo-item' + (todo.completed ? ' completed' : '');
+      li.innerHTML = `
+        <input type="checkbox" ${todo.completed ? 'checked' : ''} data-id="${todo.id}">
+        <span>${todo.text}</span>
+        <button type="button" class="delete-btn" data-id="${todo.id}">삭제</button>
+      `;
+      list.appendChild(li);
+    });
+    updateProgress();
+  }
+  function updateProgress() {
+    const total = todos.length;
+    const doneCount = todos.filter(function (t) { return t.completed; }).length;
+    const percent = total === 0 ? 0 : Math.round((doneCount / total) * 100);
+    progressBar.style.width = percent + '%';
+    progressText.textContent = doneCount + ' / ' + total;
+  }
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const value = input.value.trim();
+    if (value === '') return;
+    todos.push({ id: nextId, text: value, completed: false });
+    nextId += 1;
+    input.value = '';
+    input.focus();
+    render();
+  });
+  list.addEventListener('click', function (e) {
+    if (e.target.matches('input[type="checkbox"]')) {
+      const id = Number(e.target.dataset.id);
+      todos = todos.map(function (todo) {
+        if (todo.id === id) {
+          return { ...todo, completed: !todo.completed };
+        }
+        return todo;
+      });
+      render();
+    }
+    if (e.target.matches('.delete-btn')) {
+      const id = Number(e.target.dataset.id);
+      todos = todos.filter(function (todo) {
+        return todo.id !== id;
+      });
+      render();
+    }
+  });
+  render();
+</script>
+</body>
+</html>
